@@ -8,7 +8,10 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * The server class is responsible for handling the server side of the chatroom.
@@ -21,6 +24,7 @@ import java.util.logging.Logger;
 public class Server implements Runnable {
   private ServerSocket serverSocket;
   private final List<ClientHandler> clients;
+  private ExecutorService pool;
   private boolean running;
 
   /**
@@ -41,14 +45,18 @@ public class Server implements Runnable {
   @Override
   public void run() {
     try {
+      Logger.getLogger(this.getClass().getName()).info("Server starting...");
+
       serverSocket = new ServerSocket(PORT);
+      pool = Executors.newCachedThreadPool();
+
+      Logger.getLogger(this.getClass().getName()).info("Server started on port " + PORT + "!");
 
       while (running) {
         Socket client = serverSocket.accept();
         ClientHandler clientHandler = new ClientHandler(client, this);
         clients.add(clientHandler);
-        new Thread(clientHandler).start();
-
+        pool.execute(clientHandler);
       }
     } catch (IOException e) {
       Logger.getLogger(this.getClass().getName()).severe("Failed to accept client connection");
@@ -97,5 +105,15 @@ public class Server implements Runnable {
     } catch (IOException e) {
       // Ignore
     }
+  }
+
+  /**
+   * Returns a stream of all connected clients.
+   *
+   * @return A stream of all connected clients
+   * @since 1.0
+   */
+  public Stream<ClientHandler> getClients() {
+    return clients.stream();
   }
 }

@@ -10,5 +10,10 @@ package config;
 public class ClientConfig {
   public static final String USERNAME_NOT_SET = "DEFAULT_USER";
 
+  public static final String SHUTDOWN_COMMAND = "/quit";
+  public static final String NEW_NICKNAME_COMMAND = "/nick";
+  public static final String LIST_USERS_COMMAND = "/list";
+  public static final String HELP_COMMAND = "/help";
+
   private ClientConfig() {} // Prevent instantiation
 }

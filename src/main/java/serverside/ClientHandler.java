@@ -1,6 +1,10 @@
 package serverside;
 
+import static config.ClientConfig.LIST_USERS_COMMAND;
 import static config.ClientConfig.USERNAME_NOT_SET;
+import static config.ClientConfig.SHUTDOWN_COMMAND;
+import static config.ClientConfig.NEW_NICKNAME_COMMAND;
+import static config.ClientConfig.HELP_COMMAND;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -61,9 +65,10 @@ public class ClientHandler implements Runnable {
           server.broadcastToAll(username + ": " + input);
         }
       }
+      // END MAIN LOOP - Client disconnected
     } catch (Exception e) {
       Logger.getLogger(this.getClass().getName())
-          .severe("Failed to handle client connection. " + e.getMessage());
+          .severe("Client disconnected");
       shutdown();
     }
   }
@@ -86,7 +91,7 @@ public class ClientHandler implements Runnable {
       } catch (IOException e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to read username");
       }
-      invalidUsername = isValidUsername(input);
+      invalidUsername = isInvalidUsername(input);
     }
 
     if (username.equals(USERNAME_NOT_SET)) {
@@ -99,25 +104,25 @@ public class ClientHandler implements Runnable {
 
   /**
    * Validates whether the username is valid.
-   * Will send a message to the client if the username is invalid and return false.
+   * Will send a message to the client if the username is invalid and return true.
    *
    * @param username The username to validate
-   * @return whether the username is valid, true if valid, false otherwise
+   * @return whether the username is valid, true if invalid, false otherwise
    * @since 1.0
    */
-  private boolean isValidUsername(String username) {
+  private boolean isInvalidUsername(String username) {
     if (username == null) {
       sendMessageToClient("Invalid username.");
     } else if (username.isEmpty() || username.isBlank()) {
       sendMessageToClient("Username cannot be blank.");
     } else if (username.equals(this.username)) {
       sendMessageToClient("Using the same username.");
-      return true;
+      return false;
     } else if (server.isUsernameTaken(username)) {
       sendMessageToClient("Username already taken.");
     }
 
-    return username != null && !username.isEmpty() && !server.isUsernameTaken(username);
+    return username == null || username.isEmpty() || server.isUsernameTaken(username);
   }
 
   /**
@@ -145,29 +150,38 @@ public class ClientHandler implements Runnable {
 
     String[] parts = input.split(" ");
     switch (parts[0]) {
-      case "/help":
+      case HELP_COMMAND:
         sendMessageToClient("Available commands:");
         sendMessageToClient("/help - Displays this message");
         sendMessageToClient("/quit - Disconnects from the server");
         break;
-      case "/quit":
+      case SHUTDOWN_COMMAND:
         sendMessageToClient("Goodbye!");
         shutdown();
         break;
-      case "/nick":
+      case NEW_NICKNAME_COMMAND:
         if (parts.length < 2) {
           sendMessageToClient("Usage: /nick <new username>");
           break;
         }
 
         String newUsername = parts[1];
-        if (!isValidUsername(newUsername)) {
+        if (isInvalidUsername(newUsername)) {
           break;
         }
 
         sendMessageToClient("Username changed to " + newUsername);
         server.broadcastToAll(username + " changed their username to " + newUsername);
         username = newUsername;
+        break;
+      case LIST_USERS_COMMAND:
+        StringBuilder users = new StringBuilder("Connected users:");
+        server
+            .getClients()
+            .forEach(
+                clientHandler -> users.append("\n").append(clientHandler.getUsername())
+            );
+        sendMessageToClient(String.valueOf(users));
         break;
       default:
         sendMessageToClient("Unknown command, type /help for a list of available commands");
