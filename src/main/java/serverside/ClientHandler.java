@@ -1,10 +1,10 @@
 package serverside;
 
-import static config.ClientConfig.LIST_USERS_COMMAND;
-import static config.ClientConfig.USERNAME_NOT_SET;
-import static config.ClientConfig.SHUTDOWN_COMMAND;
-import static config.ClientConfig.NEW_NICKNAME_COMMAND;
 import static config.ClientConfig.HELP_COMMAND;
+import static config.ClientConfig.LIST_USERS_COMMAND;
+import static config.ClientConfig.NEW_NICKNAME_COMMAND;
+import static config.ClientConfig.SHUTDOWN_COMMAND;
+import static config.ClientConfig.USERNAME_NOT_SET;
 
 import java.io.BufferedReader;
 import java.io.IOException;

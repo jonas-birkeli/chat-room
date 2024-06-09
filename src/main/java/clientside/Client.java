@@ -68,10 +68,12 @@ public class Client implements Runnable {
    * @author Jonas Birkeli
    * @since 09.06.2024
    */
-  private class InputHandler implements Runnable{
+  private class InputHandler implements Runnable {
 
     /**
      * The run method is called when the thread is started.
+     *
+     * @since 1.0
      */
     @Override
     public void run() {
