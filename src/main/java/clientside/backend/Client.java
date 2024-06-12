@@ -1,4 +1,6 @@
-package clientside;
+package clientside.backend;
+
+import static config.ConnectionConfig.CONNECTION_FAILED_EXIT_CODE;
 
 import config.ConnectionConfig;
 import java.io.BufferedReader;
@@ -6,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
@@ -29,16 +33,18 @@ public class Client implements Runnable {
    */
   @Override
   public void run() {
-    try {
+    try (ExecutorService pool = Executors.newCachedThreadPool()){
       socket = new Socket(ConnectionConfig.SERVER_HOST, ConnectionConfig.PORT);
 
       out = new PrintWriter(socket.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-      new Thread(new InputHandler()).start();
-      new Thread(new OutputHandler()).start();
+      pool.execute(new InputHandler());
+      pool.execute(new OutputHandler());
+
     } catch (IOException e) {
       Logger.getLogger(this.getClass().getName()).severe("Failed to connect to server");
+      System.exit(CONNECTION_FAILED_EXIT_CODE);
     }
   }
 
@@ -53,9 +59,7 @@ public class Client implements Runnable {
     try {
       in.close();
       out.close();
-      if (!socket.isClosed()) {
-        socket.close();
-      }
+      socket.close();
     } catch (IOException e) {
       // Ignore
     }
@@ -87,6 +91,7 @@ public class Client implements Runnable {
 
           if (input.equals("/quit")) {
             shutdown();
+            running = false;
           }
           System.out.println(input);
         }

@@ -17,14 +17,13 @@ import java.util.stream.Stream;
  * The server class is responsible for handling the server side of the chatroom.
  * It will listen for incoming connections and create a new thread for each connection.
  *
- * @version 1.0
+ * @version 1.1
  * @author Jonas Birkeli
  * @since 08.06.2024
  */
 public class Server implements Runnable {
   private ServerSocket serverSocket;
   private final List<ClientHandler> clients;
-  private ExecutorService pool;
   private boolean running;
 
   /**
@@ -44,11 +43,10 @@ public class Server implements Runnable {
    */
   @Override
   public void run() {
-    try {
+    try (ExecutorService pool = Executors.newCachedThreadPool()) {
       Logger.getLogger(this.getClass().getName()).info("Server starting...");
 
       serverSocket = new ServerSocket(PORT);
-      pool = Executors.newCachedThreadPool();
 
       Logger.getLogger(this.getClass().getName()).info("Server started on port " + PORT + "!");
 
@@ -68,7 +66,7 @@ public class Server implements Runnable {
    * Checks if the username is already taken.
    *
    * @param username The username to validate
-   * @return True if the username is valid, false otherwise
+   * @return True if the username is invalid, false otherwise
    * @since 1.0
    */
   public boolean isUsernameTaken(String username) {
@@ -91,11 +89,14 @@ public class Server implements Runnable {
 
   /**
    * Shuts down the server and all connected clients.
+   *
+   * @since 1.0
    */
   public void shutdown() {
     try {
       running = false;
-      if (!serverSocket.isClosed()) {
+
+      if (serverSocket != null && !serverSocket.isClosed()) {
         serverSocket.close();
       }
       clients.stream()
@@ -114,6 +115,16 @@ public class Server implements Runnable {
    * @since 1.0
    */
   public Stream<ClientHandler> getClients() {
-    return clients.stream();
+    return clients.parallelStream();
+  }
+
+  /**
+   * Returns whether the server is running.
+   *
+   * @return True if the server is running, false otherwise
+   * @since 1.1
+   */
+  public boolean isRunning() {
+    return running;
   }
 }

@@ -1,10 +1,12 @@
 package serverside;
 
-import static config.ClientConfig.HELP_COMMAND;
-import static config.ClientConfig.LIST_USERS_COMMAND;
-import static config.ClientConfig.NEW_NICKNAME_COMMAND;
-import static config.ClientConfig.SHUTDOWN_COMMAND;
-import static config.ClientConfig.USERNAME_NOT_SET;
+import static config.UserConfig.HELP_COMMAND;
+import static config.UserConfig.LIST_USERS_COMMAND;
+import static config.UserConfig.MESSAGE_USER_COMMAND;
+import static config.UserConfig.NEW_NICKNAME_COMMAND;
+import static config.UserConfig.SHUTDOWN_COMMAND;
+import static config.UserConfig.USERNAME_NOT_SET;
+import static config.ConnectionConfig.PASSWORD;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +18,7 @@ import java.util.logging.Logger;
 /**
  * The handler class is responsible for handling the client connection.
  *
- * @version 1.0
+ * @version 1.1
  * @author Jonas Birkeli
  * @since 08.06.2024
  */
@@ -28,6 +30,7 @@ public class ClientHandler implements Runnable {
   private BufferedReader in;
 
   private String username;
+  private boolean authenticated = false;
 
   /**
    * Constructor for the handler class.
@@ -40,7 +43,7 @@ public class ClientHandler implements Runnable {
     this.client = client;
     this.server = server;
 
-    username = USERNAME_NOT_SET;
+    setUsername(USERNAME_NOT_SET);
   }
 
   /**
@@ -54,6 +57,7 @@ public class ClientHandler implements Runnable {
     try {
       out = new PrintWriter(client.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+      requestPassword();
 
       requestUsername();
       server.broadcastToAll(username + " has joined the chat.");
@@ -67,9 +71,24 @@ public class ClientHandler implements Runnable {
       }
       // END MAIN LOOP - Client disconnected
     } catch (Exception e) {
-      Logger.getLogger(this.getClass().getName())
-          .severe("Client disconnected");
       shutdown();
+    }
+    shutdown();
+  }
+
+  private void requestPassword() {
+    String input = "";
+    while (!authenticated) {
+      sendMessageToClient("Enter the password:");
+      try {
+        input = in.readLine();
+      } catch (IOException e) {
+        Logger.getLogger(this.getClass().getName()).severe("Failed to read password");
+      }
+      authenticated = input.equals(PASSWORD);
+      if (!authenticated) {
+        sendMessageToClient("Incorrect password.");
+      }
     }
   }
 
@@ -99,7 +118,7 @@ public class ClientHandler implements Runnable {
     } else {
       sendMessageToClient("Successfully changed username to " + input + "!");
     }
-    username = input;
+    setUsername(input);
   }
 
   /**
@@ -153,7 +172,28 @@ public class ClientHandler implements Runnable {
       case HELP_COMMAND:
         sendMessageToClient("Available commands:");
         sendMessageToClient("/help - Displays this message");
+        sendMessageToClient("/list - Lists all connected users");
+        sendMessageToClient("/msg <username> <message> - Sends a private message to a user");
+        sendMessageToClient("/nick <new username> - Changes your username");
         sendMessageToClient("/quit - Disconnects from the server");
+        break;
+      case MESSAGE_USER_COMMAND:
+        if (parts.length < 3) {
+          sendMessageToClient("Usage: /msg <username> <message>");
+          break;
+        }
+        String recipient = parts[1];
+        String message = input.substring(input.indexOf(recipient) + recipient.length() + 1);
+
+        if (server.isUsernameTaken(recipient)) {
+          sendMessageToClient("User not found.");
+          break;
+        }
+        server
+            .getClients()
+            .filter(clientHandler -> clientHandler.getUsername().equals(recipient))
+            .findFirst()
+            .ifPresent(clientHandler -> clientHandler.sendMessageToClient(username + " whispers: " + message));
         break;
       case SHUTDOWN_COMMAND:
         sendMessageToClient("Goodbye!");
@@ -216,5 +256,20 @@ public class ClientHandler implements Runnable {
    */
   public void sendMessageToClient(String message) {
     out.println(message);
+  }
+
+  /**
+   * Sets the username of the client.
+   * Must not be null, empty or blank.
+   *
+   * @param username The username to set
+   * @since 1.1
+   */
+  public void setUsername(String username) {
+    if (username != null && !username.isEmpty() && !username.isBlank()) {
+      this.username = username;
+    } else {
+      this.username = USERNAME_NOT_SET;
+    }
   }
 }
