@@ -5,10 +5,6 @@ import static config.ConnectionConfig.PORT;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -29,6 +25,7 @@ public class Server implements Runnable {
   private ServerSocket serverSocket;
   private final List<ClientHandler> clients;
   private boolean running;
+  private ExecutorService pool;
 
   /**
    * Constructor for the server class.
@@ -47,12 +44,14 @@ public class Server implements Runnable {
    */
   @Override
   public void run() {
-    try (ExecutorService pool = Executors.newCachedThreadPool()) {
+    try {
       Logger.getLogger(this.getClass().getName()).info("Server starting...");
 
       serverSocket = new ServerSocket(PORT);
+      pool = Executors.newCachedThreadPool();
 
       Logger.getLogger(this.getClass().getName()).info("Server started on port " + PORT + "!");
+
 
       while (running) {
         Socket client = serverSocket.accept();
@@ -106,6 +105,8 @@ public class Server implements Runnable {
       clients.stream()
           .filter(Objects::nonNull)
           .forEach(ClientHandler::shutdown);
+
+      pool.shutdown();
 
     } catch (IOException e) {
       // Ignore

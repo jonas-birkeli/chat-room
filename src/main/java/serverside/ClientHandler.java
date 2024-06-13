@@ -8,7 +8,7 @@ import static clientside.config.UserConfig.NEW_NICKNAME_COMMAND;
 import static clientside.config.UserConfig.SHUTDOWN_COMMAND;
 import static clientside.config.UserConfig.USERNAME_NOT_SET;
 import static config.ConnectionConfig.PASSWORD;
-import static keyGen.KeyConfig.KEY_ALGORITHM;
+import static keyGen.KeyConfig.KEY_ALGORITHM_PADDED;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,12 +16,12 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 import keyGen.KeyClass;
 
 /**
@@ -40,8 +40,6 @@ public class ClientHandler extends KeyClass implements Runnable {
 
   private String username;
   private boolean authenticated = false;
-  private SecretKey aesKey;
-  private IvParameterSpec ivParameterSpec;
 
   /**
    * Constructor for the handler class.
@@ -71,24 +69,12 @@ public class ClientHandler extends KeyClass implements Runnable {
     try {
       out = new PrintWriter(client.getOutputStream(), true);
       in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-      System.out.println("Client connected: " + client.getInetAddress());
 
-      // Send the public key to the client
-      out.println(Base64.getEncoder().encodeToString(getPublicKey().getEncoded()));
-
-      // Receive public key from the client
-      String serverPublicKeyString = in.readLine();
-      byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyString);
-      X509EncodedKeySpec spec = new X509EncodedKeySpec(serverPublicKeyBytes);
-      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-      setOtherPartyPublicKey(keyFactory.generatePublic(spec));
-
+      sendPublicKey();
+      requestPublicKey();
 
       requestPassword();
-      System.out.println("Client authenticated: " + client.getInetAddress());
-
       requestUsername();
-      System.out.println("Client username set: " + client.getInetAddress());
       server.broadcastToAll(username + " has joined the chat.");
 
       // MAIN LOOP - Read input from the client and broadcast it to all clients
@@ -96,7 +82,8 @@ public class ClientHandler extends KeyClass implements Runnable {
         input = decryptMessage(encryptedInput);
 
         if (input == null) {
-          sendEncryptedMessage("Failed to decrypt message.");
+          sendEncryptedMessage("Failed to decrypt message. You will be disconnected.");
+          shutdown();
           continue;
         }
 
@@ -109,6 +96,29 @@ public class ClientHandler extends KeyClass implements Runnable {
       shutdown();
     }
     shutdown();
+  }
+
+  /**
+   * Receives the public key from the client.
+   *
+   * @since 1.1
+   */
+  private void requestPublicKey()
+      throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    String serverPublicKeyString = in.readLine();
+    byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyString);
+    X509EncodedKeySpec spec = new X509EncodedKeySpec(serverPublicKeyBytes);
+    KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+    setOtherPartyPublicKey(keyFactory.generatePublic(spec));
+  }
+
+  /**
+   * Sends the public key to the client.
+   *
+   * @since 1.1
+   */
+  private void sendPublicKey() {
+    out.println(Base64.getEncoder().encodeToString(getPublicKey().getEncoded()));
   }
 
   /**
@@ -240,7 +250,7 @@ public class ClientHandler extends KeyClass implements Runnable {
         String recipient = parts[1];
         String message = input.substring(input.indexOf(recipient) + recipient.length() + 1);
 
-        if (server.isUsernameTaken(recipient)) {
+        if (!server.isUsernameTaken(recipient)) {
           sendEncryptedMessage("User not found.");
           break;
         }
@@ -338,7 +348,7 @@ public class ClientHandler extends KeyClass implements Runnable {
    */
   private String encryptMessage(String message) {
     try {
-      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM);
+      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM_PADDED);
       cipher.init(Cipher.ENCRYPT_MODE, getOtherPartyPublicKey());
       byte[] encryptedMessageBytes = cipher.doFinal(message.getBytes());
       return Base64.getEncoder().encodeToString(encryptedMessageBytes);
@@ -358,7 +368,7 @@ public class ClientHandler extends KeyClass implements Runnable {
    */
   private String decryptMessage(String encryptedMessage) {
     try {
-      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM);
+      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM_PADDED);
       cipher.init(Cipher.DECRYPT_MODE, getPrivateKey());
       byte[] decryptedMessageBytes = cipher.doFinal(Base64.getDecoder().decode(encryptedMessage));
       return new String(decryptedMessageBytes);

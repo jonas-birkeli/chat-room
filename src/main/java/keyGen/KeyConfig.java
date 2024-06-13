@@ -9,7 +9,8 @@ package keyGen;
  */
 public class KeyConfig {
   public static final int KEY_SIZE = 2048;
-  public static final String KEY_ALGORITHM = "RSA";
+  public static final String KEY_ALGORITHM_PADDED = "RSA";
+  public static final String KEY_ALGORITHM ="RSA" ;
 
   private KeyConfig() {} // Prevent instantiation
 }

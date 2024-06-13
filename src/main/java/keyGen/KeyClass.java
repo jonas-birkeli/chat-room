@@ -1,6 +1,7 @@
 package keyGen;
 
 import static keyGen.KeyConfig.KEY_ALGORITHM;
+import static keyGen.KeyConfig.KEY_ALGORITHM_PADDED;
 import static keyGen.KeyConfig.KEY_SIZE;
 
 import java.security.KeyPair;

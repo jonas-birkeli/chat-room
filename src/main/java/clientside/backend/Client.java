@@ -2,6 +2,7 @@ package clientside.backend;
 
 import static config.ConnectionConfig.CONNECTION_FAILED_EXIT_CODE;
 import static keyGen.KeyConfig.KEY_ALGORITHM;
+import static keyGen.KeyConfig.KEY_ALGORITHM_PADDED;
 
 import config.ConnectionConfig;
 import java.io.BufferedReader;
@@ -82,10 +83,12 @@ public class Client extends KeyClass implements Runnable {
     running = false;
 
     try {
-      pool.shutdown();
-      in.close();
-      out.close();
-      socket.close();
+      if (pool != null) {
+        pool.shutdown();
+      }
+      if (socket != null) {
+        socket.close();
+      }
     } catch (IOException e) {
       // Ignore
     }
@@ -110,7 +113,7 @@ public class Client extends KeyClass implements Runnable {
         String serverPublicKeyString = in.readLine();
         byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyString);
         X509EncodedKeySpec spec = new X509EncodedKeySpec(serverPublicKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
+        KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM_PADDED);
 
         setOtherPartyPublicKey(keyFactory.generatePublic(spec));
 
@@ -136,6 +139,7 @@ public class Client extends KeyClass implements Runnable {
         return new String(decryptedMessageBytes);
       } catch (Exception e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to decrypt message");
+        shutdown();
       }
       return null;
     }
@@ -153,7 +157,6 @@ public class Client extends KeyClass implements Runnable {
         while (running) {
           String input = in.readLine();
           String decryptedMessage = decryptMessage(input);
-          System.out.println(decryptedMessage);
 
           if (input == null || decryptedMessage == null) {
             continue;
@@ -163,6 +166,7 @@ public class Client extends KeyClass implements Runnable {
             shutdown();
             running = false;
           }
+
           System.out.println(decryptedMessage);
         }
       } catch (IOException e) {
@@ -212,6 +216,7 @@ public class Client extends KeyClass implements Runnable {
         return Base64.getEncoder().encodeToString(encryptedMessageBytes);
       } catch (Exception e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to encrypt message");
+        shutdown();
       }
       return null;
     }
@@ -228,13 +233,32 @@ public class Client extends KeyClass implements Runnable {
       try {
         while (running) {
           String message = System.console().readLine();
+          System.out.print("\033[1A\033[2K");  // Clear the last line sent
+
           String encryptedMessage = encryptMessage(message);
           out.println(encryptedMessage);
+
+          if (message.equals("/quit")) {
+            // Graceful termination on the server side by sending /quit
+            // before shutting down the client
+            shutdown();
+            running = false;
+          }
         }
       } catch (Exception e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to send message to server");
         shutdown();
       }
     }
+  }
+
+  /**
+   * The main method is the entry point of the program.
+   *
+   * @param args The command line arguments, discarded
+   * @since 1.0
+   */
+  public static void main(String[] args) {
+    new Client().run();
   }
 }
