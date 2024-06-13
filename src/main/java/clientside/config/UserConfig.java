@@ -1,4 +1,4 @@
-package config;
+package clientside.config;
 
 /**
  * Configuration constants for the client.

@@ -9,4 +9,5 @@ module chatroom {
   exports config;
 
   opens clientside.frontend.controllers;
+  exports clientside.config;
 }

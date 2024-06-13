@@ -1,7 +1,7 @@
 package clientside.frontend.controllers;
 
 import clientside.config.Lang;
-import config.UserConfig;
+import clientside.config.UserConfig;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;

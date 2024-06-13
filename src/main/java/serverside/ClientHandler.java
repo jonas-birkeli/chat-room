@@ -1,12 +1,12 @@
 package serverside;
 
 import static config.ConnectionConfig.WRONG_PASSWORD_TIMEOUT_MILLIS;
-import static config.UserConfig.HELP_COMMAND;
-import static config.UserConfig.LIST_USERS_COMMAND;
-import static config.UserConfig.MESSAGE_USER_COMMAND;
-import static config.UserConfig.NEW_NICKNAME_COMMAND;
-import static config.UserConfig.SHUTDOWN_COMMAND;
-import static config.UserConfig.USERNAME_NOT_SET;
+import static clientside.config.UserConfig.HELP_COMMAND;
+import static clientside.config.UserConfig.LIST_USERS_COMMAND;
+import static clientside.config.UserConfig.MESSAGE_USER_COMMAND;
+import static clientside.config.UserConfig.NEW_NICKNAME_COMMAND;
+import static clientside.config.UserConfig.SHUTDOWN_COMMAND;
+import static clientside.config.UserConfig.USERNAME_NOT_SET;
 import static config.ConnectionConfig.PASSWORD;
 import static keyGen.KeyConfig.KEY_ALGORITHM;
 
