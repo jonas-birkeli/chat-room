@@ -14,6 +14,11 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.logging.Logger;
+import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 /**
  * The handler class is responsible for handling the client connection.
@@ -31,19 +36,47 @@ public class ClientHandler implements Runnable {
 
   private String username;
   private boolean authenticated = false;
+  private final SecretKey secretKey;
+  private final IvParameterSpec ivParameterSpec;
+  private Cipher encryptCipher;
+  private Cipher decryptCipher;
 
   /**
    * Constructor for the handler class.
    *
    * @param client The client socket
    * @param server The server instance
+   * @param secretKey The secret key for encryption
+   * @param ivParameterSpec The IV for encryption
    * @since 1.0
    */
-  public ClientHandler(Socket client, Server server) {
+  public ClientHandler(Socket client, Server server, SecretKey secretKey, IvParameterSpec ivParameterSpec) {
     this.client = client;
     this.server = server;
+    this.secretKey = secretKey;
+    this.ivParameterSpec = ivParameterSpec;
 
     setUsername(USERNAME_NOT_SET);
+    initCiphers();
+  }
+
+
+  /**
+   * Initializes the encryption and decryption ciphers.
+   * Uses AES encryption with CBC mode and PKCS5 padding.
+   *
+   * @since 1.2
+   */
+  private void initCiphers() {
+    try {
+      encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+      encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
+
+      decryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+      decryptCipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec);
+    } catch (Exception e) {
+      Logger.getLogger(this.getClass().getName()).severe("Failed to initialize ciphers");
+    }
   }
 
   /**
@@ -55,8 +88,8 @@ public class ClientHandler implements Runnable {
   public void run() {
     String input;
     try {
-      out = new PrintWriter(client.getOutputStream(), true);
-      in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+      out = new PrintWriter(new CipherOutputStream(client.getOutputStream(), encryptCipher), true);
+      in = new BufferedReader(new InputStreamReader(new CipherInputStream(client.getInputStream(), decryptCipher)));
       requestPassword();
 
       requestUsername();
@@ -87,6 +120,12 @@ public class ClientHandler implements Runnable {
       }
       authenticated = input.equals(PASSWORD);
       if (!authenticated) {
+        try {
+          Thread.sleep(3000); // 3-second cooldown
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          Logger.getLogger(this.getClass().getName()).severe("Thread was interrupted during cooldown");
+        }
         sendMessageToClient("Incorrect password.");
       }
     }
