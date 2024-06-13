@@ -7,6 +7,7 @@ import static clientside.config.Win.WINDOW_TITLE;
 import java.io.IOException;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -37,13 +38,7 @@ public class Main extends Application {
     FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml-files/mainpage.fxml"));
     System.out.println("loader created");
 
-    VBox root = null;
-    try {
-      root = loader.load();
-      System.out.println("Loaded root");
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    Parent root = loader.load();
 
     if (root == null) {
       System.exit(1);
@@ -51,14 +46,9 @@ public class Main extends Application {
 
     Scene scene = new Scene(root, PREF_WIDTH, PREF_HEIGHT);
 
-    Label root2 = (Label) root.getChildren().get(0);
-    System.out.println(root2 == null);
-
     stage.setTitle(WINDOW_TITLE);
     stage.setScene(scene);
-    System.out.println("Kom hit");
     stage.show();
-    System.out.println("kom ikke hit");
   }
 
   /**

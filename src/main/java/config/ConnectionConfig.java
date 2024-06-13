@@ -12,6 +12,7 @@ public class ConnectionConfig {
   public static final String LOCALHOST = "127.0.0.1";
   public static final String SERVER_HOST = LOCALHOST;
   public static final String PASSWORD = "password";
+  public static final int WRONG_PASSWORD_TIMEOUT_MILLIS = 0;
 
   public static final int CONNECTION_FAILED_EXIT_CODE = 50;
 

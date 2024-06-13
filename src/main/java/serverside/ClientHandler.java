@@ -1,5 +1,6 @@
 package serverside;
 
+import static config.ConnectionConfig.WRONG_PASSWORD_TIMEOUT_MILLIS;
 import static config.UserConfig.HELP_COMMAND;
 import static config.UserConfig.LIST_USERS_COMMAND;
 import static config.UserConfig.MESSAGE_USER_COMMAND;
@@ -7,18 +8,21 @@ import static config.UserConfig.NEW_NICKNAME_COMMAND;
 import static config.UserConfig.SHUTDOWN_COMMAND;
 import static config.UserConfig.USERNAME_NOT_SET;
 import static config.ConnectionConfig.PASSWORD;
+import static keyGen.KeyConfig.KEY_ALGORITHM;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.KeyFactory;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import keyGen.KeyClass;
 
 /**
  * The handler class is responsible for handling the client connection.
@@ -27,7 +31,7 @@ import javax.crypto.spec.IvParameterSpec;
  * @author Jonas Birkeli
  * @since 08.06.2024
  */
-public class ClientHandler implements Runnable {
+public class ClientHandler extends KeyClass implements Runnable {
   private final Socket client;
   private final Server server;
 
@@ -36,47 +40,23 @@ public class ClientHandler implements Runnable {
 
   private String username;
   private boolean authenticated = false;
-  private final SecretKey secretKey;
-  private final IvParameterSpec ivParameterSpec;
-  private Cipher encryptCipher;
-  private Cipher decryptCipher;
+  private SecretKey aesKey;
+  private IvParameterSpec ivParameterSpec;
 
   /**
    * Constructor for the handler class.
    *
    * @param client The client socket
    * @param server The server instance
-   * @param secretKey The secret key for encryption
-   * @param ivParameterSpec The IV for encryption
    * @since 1.0
    */
-  public ClientHandler(Socket client, Server server, SecretKey secretKey, IvParameterSpec ivParameterSpec) {
+  public ClientHandler(Socket client, Server server) {
+    super();
+
     this.client = client;
     this.server = server;
-    this.secretKey = secretKey;
-    this.ivParameterSpec = ivParameterSpec;
 
     setUsername(USERNAME_NOT_SET);
-    initCiphers();
-  }
-
-
-  /**
-   * Initializes the encryption and decryption ciphers.
-   * Uses AES encryption with CBC mode and PKCS5 padding.
-   *
-   * @since 1.2
-   */
-  private void initCiphers() {
-    try {
-      encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-      encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParameterSpec);
-
-      decryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-      decryptCipher.init(Cipher.DECRYPT_MODE, secretKey, ivParameterSpec);
-    } catch (Exception e) {
-      Logger.getLogger(this.getClass().getName()).severe("Failed to initialize ciphers");
-    }
   }
 
   /**
@@ -86,17 +66,39 @@ public class ClientHandler implements Runnable {
    */
   @Override
   public void run() {
+    String encryptedInput;
     String input;
     try {
-      out = new PrintWriter(new CipherOutputStream(client.getOutputStream(), encryptCipher), true);
-      in = new BufferedReader(new InputStreamReader(new CipherInputStream(client.getInputStream(), decryptCipher)));
+      out = new PrintWriter(client.getOutputStream(), true);
+      in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+      System.out.println("Client connected: " + client.getInetAddress());
+
+      // Send the public key to the client
+      out.println(Base64.getEncoder().encodeToString(getPublicKey().getEncoded()));
+
+      // Receive public key from the client
+      String serverPublicKeyString = in.readLine();
+      byte[] serverPublicKeyBytes = Base64.getDecoder().decode(serverPublicKeyString);
+      X509EncodedKeySpec spec = new X509EncodedKeySpec(serverPublicKeyBytes);
+      KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+      setOtherPartyPublicKey(keyFactory.generatePublic(spec));
+
+
       requestPassword();
+      System.out.println("Client authenticated: " + client.getInetAddress());
 
       requestUsername();
+      System.out.println("Client username set: " + client.getInetAddress());
       server.broadcastToAll(username + " has joined the chat.");
 
       // MAIN LOOP - Read input from the client and broadcast it to all clients
-      while ((input = in.readLine()) != null) {
+      while ((encryptedInput = in.readLine()) != null && !client.isClosed()) {
+        input = decryptMessage(encryptedInput);
+
+        if (input == null) {
+          sendEncryptedMessage("Failed to decrypt message.");
+          continue;
+        }
 
         if (!handleIfCommand(input)) {
           server.broadcastToAll(username + ": " + input);
@@ -109,24 +111,36 @@ public class ClientHandler implements Runnable {
     shutdown();
   }
 
+  /**
+   * Requests the password from the client.
+   *
+   * @since 1.0
+   */
+  @SuppressWarnings("BusyWait")
   private void requestPassword() {
     String input = "";
     while (!authenticated) {
-      sendMessageToClient("Enter the password:");
+      sendEncryptedMessage("Enter the password:");
       try {
-        input = in.readLine();
+        input = decryptMessage(in.readLine());
       } catch (IOException e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to read password");
       }
+      if (input == null) {
+        sendEncryptedMessage("Failed to decrypt password.");
+        continue;
+      }
       authenticated = input.equals(PASSWORD);
       if (!authenticated) {
+
         try {
-          Thread.sleep(3000); // 3-second cooldown
+          Thread.sleep(WRONG_PASSWORD_TIMEOUT_MILLIS);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           Logger.getLogger(this.getClass().getName()).severe("Thread was interrupted during cooldown");
         }
-        sendMessageToClient("Incorrect password.");
+
+        sendEncryptedMessage("Incorrect password.");
       }
     }
   }
@@ -142,10 +156,12 @@ public class ClientHandler implements Runnable {
 
     boolean invalidUsername = true;
     while (invalidUsername) {
-      sendMessageToClient("Enter your username:");
+      sendEncryptedMessage("Enter your username:");
 
       try {
-        input = in.readLine();
+        String encryptedInput = in.readLine();
+        input = decryptMessage(encryptedInput);
+
       } catch (IOException e) {
         Logger.getLogger(this.getClass().getName()).severe("Failed to read username");
       }
@@ -153,9 +169,9 @@ public class ClientHandler implements Runnable {
     }
 
     if (username.equals(USERNAME_NOT_SET)) {
-      sendMessageToClient("Welcome " + input + "!");
+      sendEncryptedMessage("Welcome " + input + "!");
     } else {
-      sendMessageToClient("Successfully changed username to " + input + "!");
+      sendEncryptedMessage("Successfully changed username to " + input + "!");
     }
     setUsername(input);
   }
@@ -170,14 +186,14 @@ public class ClientHandler implements Runnable {
    */
   private boolean isInvalidUsername(String username) {
     if (username == null) {
-      sendMessageToClient("Invalid username.");
+      sendEncryptedMessage("Invalid username.");
     } else if (username.isEmpty() || username.isBlank()) {
-      sendMessageToClient("Username cannot be blank.");
+      sendEncryptedMessage("Username cannot be blank.");
     } else if (username.equals(this.username)) {
-      sendMessageToClient("Using the same username.");
+      sendEncryptedMessage("Using the same username.");
       return false;
     } else if (server.isUsernameTaken(username)) {
-      sendMessageToClient("Username already taken.");
+      sendEncryptedMessage("Username already taken.");
     }
 
     return username == null || username.isEmpty() || server.isUsernameTaken(username);
@@ -209,38 +225,38 @@ public class ClientHandler implements Runnable {
     String[] parts = input.split(" ");
     switch (parts[0]) {
       case HELP_COMMAND:
-        sendMessageToClient("Available commands:");
-        sendMessageToClient("/help - Displays this message");
-        sendMessageToClient("/list - Lists all connected users");
-        sendMessageToClient("/msg <username> <message> - Sends a private message to a user");
-        sendMessageToClient("/nick <new username> - Changes your username");
-        sendMessageToClient("/quit - Disconnects from the server");
+        sendEncryptedMessage("Available commands:");
+        sendEncryptedMessage("/help - Displays this message");
+        sendEncryptedMessage("/list - Lists all connected users");
+        sendEncryptedMessage("/msg <username> <message> - Sends a private message to a user");
+        sendEncryptedMessage("/nick <new username> - Changes your username");
+        sendEncryptedMessage("/quit - Disconnects from the server");
         break;
       case MESSAGE_USER_COMMAND:
         if (parts.length < 3) {
-          sendMessageToClient("Usage: /msg <username> <message>");
+          sendEncryptedMessage("Usage: /msg <username> <message>");
           break;
         }
         String recipient = parts[1];
         String message = input.substring(input.indexOf(recipient) + recipient.length() + 1);
 
         if (server.isUsernameTaken(recipient)) {
-          sendMessageToClient("User not found.");
+          sendEncryptedMessage("User not found.");
           break;
         }
         server
             .getClients()
             .filter(clientHandler -> clientHandler.getUsername().equals(recipient))
             .findFirst()
-            .ifPresent(clientHandler -> clientHandler.sendMessageToClient(username + " whispers: " + message));
+            .ifPresent(clientHandler -> clientHandler.sendEncryptedMessage(username + " whispers: " + message));
         break;
       case SHUTDOWN_COMMAND:
-        sendMessageToClient("Goodbye!");
+        sendEncryptedMessage("Goodbye!");
         shutdown();
         break;
       case NEW_NICKNAME_COMMAND:
         if (parts.length < 2) {
-          sendMessageToClient("Usage: /nick <new username>");
+          sendEncryptedMessage("Usage: /nick <new username>");
           break;
         }
 
@@ -249,7 +265,7 @@ public class ClientHandler implements Runnable {
           break;
         }
 
-        sendMessageToClient("Username changed to " + newUsername);
+        sendEncryptedMessage("Username changed to " + newUsername);
         server.broadcastToAll(username + " changed their username to " + newUsername);
         username = newUsername;
         break;
@@ -260,10 +276,10 @@ public class ClientHandler implements Runnable {
             .forEach(
                 clientHandler -> users.append("\n").append(clientHandler.getUsername())
             );
-        sendMessageToClient(String.valueOf(users));
+        sendEncryptedMessage(String.valueOf(users));
         break;
       default:
-        sendMessageToClient("Unknown command, type /help for a list of available commands");
+        sendEncryptedMessage("Unknown command, type /help for a list of available commands");
     }
     return true;
   }
@@ -287,14 +303,14 @@ public class ClientHandler implements Runnable {
   }
 
   /**
-   * Sends a message to the client.
+   * Encrypts and sends a message to the client.
    * The message is sent to the client output stream.
    *
    * @param message The message to send
    * @since 1.0
    */
-  public void sendMessageToClient(String message) {
-    out.println(message);
+  public void sendEncryptedMessage(String message) {
+    out.println(encryptMessage(message));
   }
 
   /**
@@ -309,6 +325,46 @@ public class ClientHandler implements Runnable {
       this.username = username;
     } else {
       this.username = USERNAME_NOT_SET;
+    }
+  }
+
+  /**
+   * Encrypt the message using AES encryption
+   * If the encryption fails, a message is logged, and null is returned
+   *
+   * @param message The message to encrypt
+   * @return The encrypted message
+   * @since 1.1
+   */
+  private String encryptMessage(String message) {
+    try {
+      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM);
+      cipher.init(Cipher.ENCRYPT_MODE, getOtherPartyPublicKey());
+      byte[] encryptedMessageBytes = cipher.doFinal(message.getBytes());
+      return Base64.getEncoder().encodeToString(encryptedMessageBytes);
+    } catch (Exception e) {
+      Logger.getLogger(this.getClass().getName()).severe("Failed to encrypt message");
+      return null;
+    }
+  }
+
+  /**
+   * Decrypt the message using AES decryption
+   * If the decryption fails, a message is logged and null is returned
+   *
+   * @param encryptedMessage The message to decrypt
+   * @return The decrypted message
+   * @since 1.1
+   */
+  private String decryptMessage(String encryptedMessage) {
+    try {
+      Cipher cipher = Cipher.getInstance(KEY_ALGORITHM);
+      cipher.init(Cipher.DECRYPT_MODE, getPrivateKey());
+      byte[] decryptedMessageBytes = cipher.doFinal(Base64.getDecoder().decode(encryptedMessage));
+      return new String(decryptedMessageBytes);
+    } catch (Exception e) {
+      Logger.getLogger(this.getClass().getName()).severe("Failed to decrypt message");
+      return null;
     }
   }
 }

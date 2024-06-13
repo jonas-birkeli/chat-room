@@ -5,7 +5,10 @@ import static config.ConnectionConfig.PORT;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.SecureRandom;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -13,9 +16,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 /**
  * The server class is responsible for handling the server side of the chatroom.
@@ -29,8 +29,6 @@ public class Server implements Runnable {
   private ServerSocket serverSocket;
   private final List<ClientHandler> clients;
   private boolean running;
-  private SecretKey secretKey;
-  private IvParameterSpec ivParameterSpec;
 
   /**
    * Constructor for the server class.
@@ -40,26 +38,6 @@ public class Server implements Runnable {
   public Server() {
     clients = new ArrayList<>();
     running = true;
-    generateKeyAndIv();
-  }
-
-  /**
-   * Generates a secret key and IV for AES encryption.
-   * Using AES-128 encryption with 16 byte IV.
-   *
-   * @since 1.2
-   */
-  private void generateKeyAndIv() {
-    try {
-      KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-      keyGenerator.init(128);
-      secretKey = keyGenerator.generateKey();
-      byte[] iv = new byte[16];
-      new SecureRandom().nextBytes(iv);
-      ivParameterSpec = new IvParameterSpec(iv);
-    } catch (Exception e) {
-      Logger.getLogger(this.getClass().getName()).severe("Failed to generate key and IV");
-    }
   }
 
   /**
@@ -78,7 +56,7 @@ public class Server implements Runnable {
 
       while (running) {
         Socket client = serverSocket.accept();
-        ClientHandler clientHandler = new ClientHandler(client, this, secretKey, ivParameterSpec);
+        ClientHandler clientHandler = new ClientHandler(client, this);
         clients.add(clientHandler);
         pool.execute(clientHandler);
       }
@@ -110,7 +88,7 @@ public class Server implements Runnable {
   public void broadcastToAll(String message) {
     clients.stream()
         .filter(Objects::nonNull)
-        .forEach(clientHandler -> clientHandler.sendMessageToClient(message));
+        .forEach(clientHandler -> clientHandler.sendEncryptedMessage(message));
   }
 
   /**

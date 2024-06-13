@@ -1,0 +1,8 @@
+.page-root {
+  -fx-background-color: #27374D;
+}
+
+#welcomeLabel {
+  -fx-font-size: 24;
+  -fx-text-fill: white;
+}
