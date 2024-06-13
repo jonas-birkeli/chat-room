@@ -8,21 +8,25 @@ The application uses RSA encryption to encrypt messages between the client and s
 
 ## Usage
 - Client:
-```
 Run the client shell script to start the client application:
-$ ./client.sh
+```
+./client.sh
+```
 
 Alternatively, run the following command in the terminal:
-$ mvn exec:java -Dexec.mainClass="clientside.backend.Client"
+```
+mvn exec:java -Dexec.mainClass="clientside.backend.Client"
 ```
 
 - Server:
-```
 Run the server shell script to start the server application:
-$ ./server.sh
+```
+./server.sh
+```
 
 Alternatively, run the following command in the terminal:
-$ mvn exec:java -Dexec.mainClass="serverside.backend.Server"
+```
+mvn exec:java -Dexec.mainClass="serverside.backend.Server"
 ```
 Server-password is `password` by default,
 and can be changed in the `config.ConnectionConfig.java` file.
