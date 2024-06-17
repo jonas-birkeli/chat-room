@@ -6,9 +6,12 @@
 
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.control.TextField?>
 <VBox styleClass="page-root" fx:id="mainPageRoot" xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml" stylesheets="@../css/main-page.css"
       fx:controller="clientside.frontend.controllers.MainPageController">
-    <Label fx:id="welcomeLabel"/>
-    <Button fx:id="loginButton" onAction="#handleLoginButton"/>
+    <Label styleClass="hint" text="Enter today's wordle answer:" fx:id="header"/>
+    <TextField promptText="Password" styleClass="input-field" fx:id="inputField" onAction="#handleInput"/>
+    <Button styleClass="login-button" fx:id="loginButton" onAction="#handleLoginButton" text="Enter"/>
 </VBox>

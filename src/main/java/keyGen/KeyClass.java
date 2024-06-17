@@ -1,8 +1,9 @@
 package keyGen;
 
-import static keyGen.KeyConfig.KEY_ALGORITHM;
-import static keyGen.KeyConfig.KEY_ALGORITHM_PADDED;
-import static keyGen.KeyConfig.KEY_SIZE;
+import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keyGen.KeyConfig.ASYMMETRIC_KEY_SIZE;
+import static keyGen.KeyConfig.SYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keyGen.KeyConfig.SYMMETRIC_KEY_SIZE;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -10,37 +11,68 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.logging.Logger;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 /**
  * The KeyClass class is responsible for generating keys.
  *
- * @version 1.0
+ * @version 1.1
  * @author Jonas Birkeli
  * @since 13.06.2024
  */
-public class KeyClass {
-  private final PrivateKey privateKey;
-  private final PublicKey publicKey;
+public abstract class KeyClass {
+  private PublicKey publicKey;
+  private PrivateKey privateKey;
   private PublicKey otherPartyPublicKey;
+  private SecretKey secretKey;
 
   /**
    * Constructor for the KeyClass class.
+   * Creates the RSA key pair and the AES key.
    *
    * @since 1.0
    */
-  public KeyClass() {
+  protected KeyClass() {
+    generateRSAKeyPair();
+    generateAESKey();
+  }
+
+  /**
+   * Generate an RSA key pair.
+   * The key pair is stored in the private and public fields.
+   *
+   * @since 1.0
+   */
+  private void generateRSAKeyPair() {
     KeyPair keyPair;
     try {
-      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(KEY_ALGORITHM);
-      keyPairGenerator.initialize(KEY_SIZE);
+      KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(ASYMMETRIC_ALGORITHM_CREATE_KEY);
+      keyPairGenerator.initialize(ASYMMETRIC_KEY_SIZE);
       keyPair = keyPairGenerator.generateKeyPair();
+      privateKey = keyPair.getPrivate();
+      publicKey = keyPair.getPublic();
     } catch (NoSuchAlgorithmException e) {
-      Logger.getLogger(this.getClass().getName()).severe("Failed to generate RSA key pair");
-      keyPair = null;
+      Logger.getLogger(this.getClass().getName()).severe("Failed to generate RSA key pair. " + e.getMessage());
+      System.exit(1);
     }
-    assert keyPair != null;
-    privateKey = keyPair.getPrivate();
-    publicKey = keyPair.getPublic();
+  }
+
+  /**
+   * Generate an AES key.
+   * The key is stored in the secretKey field.
+   *
+   * @since 1.1
+   */
+  private void generateAESKey() {
+    try {
+      KeyGenerator keyGenerator = KeyGenerator.getInstance(SYMMETRIC_ALGORITHM_CREATE_KEY);
+      keyGenerator.init(SYMMETRIC_KEY_SIZE);
+      setSecretKey(keyGenerator.generateKey());
+
+    } catch (NoSuchAlgorithmException e) {
+      Logger.getLogger(this.getClass().getName()).severe("Failed to generate AES key." + e.getMessage());
+    }
   }
 
   /**
@@ -70,6 +102,9 @@ public class KeyClass {
    * @since 1.0
    */
   protected void setOtherPartyPublicKey(PublicKey otherPartyPublicKey) {
+    if (otherPartyPublicKey == null) {
+      throw new IllegalArgumentException("Public key cannot be null");
+    }
     this.otherPartyPublicKey = otherPartyPublicKey;
   }
 
@@ -81,5 +116,24 @@ public class KeyClass {
    */
   protected PublicKey getOtherPartyPublicKey() {
     return otherPartyPublicKey;
+  }
+
+  /**
+   * Sets the symmetric key.
+   *
+   * @since 1.1
+   */
+  protected void setSecretKey(SecretKey secretKey) {
+    this.secretKey = secretKey;
+  }
+
+  /**
+   * Gets the symmetric key.
+   *
+   * @return The symmetric key
+   * @since 1.1
+   */
+  protected SecretKey getSecretKey() {
+    return secretKey;
   }
 }

@@ -1,16 +1,14 @@
 package clientside.frontend;
 
-import static clientside.config.Win.PREF_HEIGHT;
-import static clientside.config.Win.PREF_WIDTH;
-import static clientside.config.Win.WINDOW_TITLE;
+import static config.Win.PREF_HEIGHT;
+import static config.Win.PREF_WIDTH;
+import static config.Win.WINDOW_TITLE;
 
-import java.io.IOException;
+import clientside.backend.Client;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
@@ -59,5 +57,9 @@ public class Main extends Application {
   @Override
   public void stop() {
     System.out.println("Exiting application");
+    try {
+      Client.getInstance().shutdown();
+    } catch (Exception ignored) {
+    }
   }
 }

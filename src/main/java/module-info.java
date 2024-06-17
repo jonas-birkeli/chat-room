@@ -3,11 +3,12 @@ module chatroom {
   requires javafx.base;
   requires javafx.controls;
   requires javafx.fxml;
+  requires org.json;
 
   exports clientside.frontend;
   exports clientside.backend;
   exports config;
 
   opens clientside.frontend.controllers;
-  exports clientside.config;
+  exports clientside.backend.models;
 }

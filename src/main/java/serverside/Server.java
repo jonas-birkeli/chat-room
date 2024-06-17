@@ -124,16 +124,12 @@ public class Server implements Runnable {
   }
 
   /**
-   * Returns whether the server is running.
+   * Removes a client from the server.
    *
-   * @return True if the server is running, false otherwise
-   * @since 1.1
+   * @param clientHandler The client to remove
+   * @since 1.2
    */
-  public boolean isRunning() {
-    return running;
-  }
-
-  public static void main(String[] args) {
-    new Server().run();
+  public void removeClient(ClientHandler clientHandler) {
+    clients.remove(clientHandler);
   }
 }

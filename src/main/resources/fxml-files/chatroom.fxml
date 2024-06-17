@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.VBox ?>
+
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Label?>
+<VBox styleClass="page-root" fx:id="chatRoomRoot" xmlns="http://javafx.com/javafx"
+  xmlns:fx="http://javafx.com/fxml" stylesheets="@../css/chat-room.css"
+  fx:controller="clientside.frontend.controllers.ChatRoomController">
+
+  <ScrollPane fx:id="scrollPane" styleClass="scrollPane" vbarPolicy="ALWAYS">
+    <VBox fx:id="messageBox" styleClass="chatBox">
+      <Label fx:id="message" styleClass="message" text="Welcome to the chatroom!"/>
+    </VBox>
+  </ScrollPane>
+  <TextField fx:id="inputField" promptText="Type a message" styleClass="inputField" onAction="#handleInput"/>
+    <!-- This is where the user will type their message -->
+
+</VBox>

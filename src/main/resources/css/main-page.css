@@ -1,8 +1,59 @@
 .page-root {
   -fx-background-color: #27374D;
+  -fx-alignment: center;
+  -fx-spacing: 20px;
 }
 
-#welcomeLabel {
-  -fx-font-size: 24;
+.password-field {
+  -fx-background-color: #9DB2BF;
+  -fx-text-fill: black;
+  -fx-prompt-text-fill: black;
+  -fx-min-width: 5px;
+  -fx-max-width: 5px;
+  -fx-border-radius: 10px;
+  -fx-background-radius: 10px;
+}
+
+.password-field:hover {
+  -fx-background-color: #526D82;
   -fx-text-fill: white;
+  -fx-prompt-text-fill: white;
+}
+
+.hint {
+  -fx-text-fill: #9DB2BF;
+}
+
+.login-button {
+  -fx-background-color: #9DB2BF;
+  -fx-background-radius: 10px;
+  -fx-border-radius: 10px;
+  -fx-border-color: #526D82;
+  -fx-min-width: 50px;
+
+}
+
+.login-button:hover {
+  -fx-background-color: #526D82;
+  -fx-text-fill: white;
+}
+
+.login-button:pressed {
+  -fx-background-color: #526D82;
+}
+
+#errorLabel {
+  -fx-text-fill: white;
+  -fx-background-color: red;
+  -fx-background-radius: 10px;
+  -fx-border-radius: 10px;
+  -fx-padding: 10px;
+}
+
+#successLabel {
+  -fx-text-fill: white;
+  -fx-background-color: green;
+  -fx-background-radius: 10px;
+  -fx-border-radius: 10px;
+  -fx-padding: 10px;
 }

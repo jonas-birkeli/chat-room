@@ -1,4 +1,4 @@
-package clientside.config;
+package config;
 
 /**
  * The configuration for the window.
