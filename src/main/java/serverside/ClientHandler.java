@@ -11,9 +11,9 @@ import static config.UserConfig.NEW_NICKNAME_COMMAND;
 import static config.UserConfig.SHUTDOWN_COMMAND;
 import static config.UserConfig.USERNAME_NOT_SET;
 import static config.ConnectionConfig.PASSWORD;
-import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
-import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
-import static keyGen.KeyConfig.SYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
+import static keygen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keygen.KeyConfig.ASYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
+import static keygen.KeyConfig.SYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
 
 import clientside.backend.Client;
 import java.io.BufferedReader;
@@ -28,7 +28,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
-import keyGen.KeyClass;
+import keygen.KeyClass;
 
 /**
  * The handler class is responsible for handling the client connection.
@@ -47,6 +47,7 @@ public class ClientHandler extends KeyClass implements Runnable {
   private String username = USERNAME_NOT_SET;
   private boolean authenticated = false;
   private boolean administrator = false;
+  private boolean receiveMessages = false;
 
   /**
    * Constructor for the handler class.
@@ -82,6 +83,8 @@ public class ClientHandler extends KeyClass implements Runnable {
       requestPassword();
       requestUsername();
 
+      receiveMessages = true;
+
       server.broadcastToAll(username + " has joined the chat.");
 
       // MAIN LOOP - Read input from the client and broadcast it to all clients
@@ -97,8 +100,7 @@ public class ClientHandler extends KeyClass implements Runnable {
           server.broadcastToAll(username + ": " + input);
         }
       }
-    } catch (Exception ignored) {
-    }
+    } catch (Exception ignored) {/* Ignored */}
     shutdown();
   }
 
@@ -429,5 +431,16 @@ public class ClientHandler extends KeyClass implements Runnable {
       shutdown();
     }
     return null;
+  }
+
+  /**
+   * Returns whether the client can receive messages or not.
+   * Checks if the client is authenticated and the username is not the default value.
+   *
+   * @return True if the client is valid, false otherwise
+   * @since 1.0
+   */
+  public boolean canReceiveMessages() {
+    return authenticated && receiveMessages;
   }
 }

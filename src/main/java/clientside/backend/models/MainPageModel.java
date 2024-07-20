@@ -18,7 +18,7 @@ public class MainPageModel {
   }
 
   public boolean checkPassword(String input) {
-    if (passwordCorrect) {
+    if (client.isAuthented()) {
       return true;
     }
 

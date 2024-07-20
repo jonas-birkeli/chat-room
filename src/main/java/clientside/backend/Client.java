@@ -2,10 +2,10 @@ package clientside.backend;
 
 import static config.ConnectionConfig.PASSWORD_SUCCESS_MESSAGE;
 import static config.ConnectionConfig.USERNAME_SUCCESS_MESSAGE;
-import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
-import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
-import static keyGen.KeyConfig.SYMMETRIC_ALGORITHM_CREATE_KEY;
-import static keyGen.KeyConfig.SYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
+import static keygen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keygen.KeyConfig.ASYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
+import static keygen.KeyConfig.SYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keygen.KeyConfig.SYMMETRIC_ALGORITHM_ENCRYPT_DECRYPT;
 
 import clientside.backend.models.ChatRoomModel;
 import config.ConnectionConfig;
@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import keyGen.KeyClass;
+import keygen.KeyClass;
 
 /**
  * The client class is responsible for handling the client side of the chatroom.

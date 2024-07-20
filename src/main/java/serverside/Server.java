@@ -52,7 +52,6 @@ public class Server implements Runnable {
 
       Logger.getLogger(this.getClass().getName()).info("Server started on port " + PORT + "!");
 
-
       while (running) {
         Socket client = serverSocket.accept();
         ClientHandler clientHandler = new ClientHandler(client, this);
@@ -80,13 +79,17 @@ public class Server implements Runnable {
 
   /**
    * Broadcasts a message to all connected clients.
+   * Checks for null and if the client can receive messages.
+   * See {@link ClientHandler#canReceiveMessages}
    *
+   * @see ClientHandler#canReceiveMessages
    * @param message The message to broadcast
    * @since 1.0
    */
   public void broadcastToAll(String message) {
-    clients.stream()
+    getClients()
         .filter(Objects::nonNull)
+        .filter(ClientHandler::canReceiveMessages)
         .forEach(clientHandler -> clientHandler.sendEncryptedMessage(message));
   }
 
@@ -108,9 +111,7 @@ public class Server implements Runnable {
 
       pool.shutdown();
 
-    } catch (IOException e) {
-      // Ignore
-    }
+    } catch (IOException ignored) {/* Ignored */}
   }
 
   /**

@@ -10,7 +10,7 @@ package config;
 public class ConnectionConfig {
   public static final int PORT = 8687;
   public static final String LOCALHOST = "::1";  // IPv6 localhost because it looks cooler
-  public static final String SERVER_HOST = LOCALHOST;
+  public static final String SERVER_HOST = "164.68.98.143";
 
   public static final boolean USE_WORDLE_SOLUTION_AS_PASSWORD = true;
   public static final String PASSWORD = "password";

@@ -1,9 +1,9 @@
-package keyGen;
+package keygen;
 
-import static keyGen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
-import static keyGen.KeyConfig.ASYMMETRIC_KEY_SIZE;
-import static keyGen.KeyConfig.SYMMETRIC_ALGORITHM_CREATE_KEY;
-import static keyGen.KeyConfig.SYMMETRIC_KEY_SIZE;
+import static keygen.KeyConfig.ASYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keygen.KeyConfig.ASYMMETRIC_KEY_SIZE;
+import static keygen.KeyConfig.SYMMETRIC_ALGORITHM_CREATE_KEY;
+import static keygen.KeyConfig.SYMMETRIC_KEY_SIZE;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -69,7 +69,6 @@ public abstract class KeyClass {
       KeyGenerator keyGenerator = KeyGenerator.getInstance(SYMMETRIC_ALGORITHM_CREATE_KEY);
       keyGenerator.init(SYMMETRIC_KEY_SIZE);
       setSecretKey(keyGenerator.generateKey());
-
     } catch (NoSuchAlgorithmException e) {
       Logger.getLogger(this.getClass().getName()).severe("Failed to generate AES key." + e.getMessage());
     }
